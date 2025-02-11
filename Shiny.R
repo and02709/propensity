@@ -7,6 +7,7 @@ library(grid)
 library(gridExtra)
 library(GGally)
 library(gt)
+library(DT)
 
 ### Notes to self
 # in variable QC add sliding scale of original counts, final counts, and weights
