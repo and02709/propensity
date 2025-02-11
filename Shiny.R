@@ -202,15 +202,41 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$show_data, {
-    output$contents_ui <- render_gt(
-      tibble::tibble(data()) %>% 
+    
+    output$contents_ui <- renderUI({
+      dataTableOutput("contents_table")  # Create a DT output placeholder
+    })
+    
+    output$contents_table <- renderDataTable({
+      req(data())  # Ensure data is available
+      
+      # Convert data to a format suitable for DT
+      df <- tibble::tibble(data()) %>% 
         dplyr::select(all_of(input$demo_vars)) %>% 
-        table(.) %>% 
-        data.frame(.) %>% 
+        table() %>% 
+        as.data.frame() %>% 
         group_by(!!!syms(input$demo_vars)) %>% 
-        ungroup() %>%
-        gt() %>% 
-        data_color(columns = Freq, method = "numeric", palette = "plasma"))
+        ungroup()
+      
+      # Create DT table with pagination & styling
+      datatable(
+        df, 
+        options = list(
+          pageLength = 10,        # Number of rows per page
+          lengthMenu = c(5, 10, 20, 50), # Dropdown for number of rows
+          scrollX = TRUE,         # Enable horizontal scrolling
+          autoWidth = TRUE        # Adjust column widths
+        )
+      ) %>%
+        formatStyle(
+          'Freq',  # Apply color to the frequency column
+          backgroundColor = styleInterval(
+            c(5, 10, 20),  # Color intervals
+            c('red', 'yellow', 'lightgreen', 'darkgreen')  # Color scheme
+          ),
+          color = 'black'
+        )
+    })
   })
   
   observeEvent(input$calculate, {
