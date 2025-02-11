@@ -189,7 +189,7 @@ server <- function(input, output, session) {
     req(data())
     req(input$QC_vars)
     if(input$QC_opts=="var"){
-      numericInput("thresh_lower", "Enter a Lower QC Variable Limit:", value = -1e12)
+      numericInput("thresh_lower", "Enter a Lower QC Variable Limit:", value = -10)
     }
   })
   
@@ -197,7 +197,7 @@ server <- function(input, output, session) {
     req(data())
     req(input$QC_vars)
     if(input$QC_opts=="var"){
-      numericInput("thresh_upper", "Enter an Upper QC Variable Limit:", value = 1e12)
+      numericInput("thresh_upper", "Enter an Upper QC Variable Limit:", value = 10)
     }
   })
   
