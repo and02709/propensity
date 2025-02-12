@@ -1,4 +1,3 @@
-
 library(shiny)
 library(tidyverse)
 library(tidymodels)
@@ -90,7 +89,7 @@ ui <- fluidPage(
       #tableOutput("weights")
       uiOutput("contents_ui"),
       uiOutput("summary_ui"),
-      uiOutput("crosstabs_ui"),
+      uiOutput("crosstabs_ui")
       
     )
   )
@@ -202,7 +201,7 @@ server <- function(input, output, session) {
     }
   })
   
-  observeEvent(input$show_data, {
+observeEvent(input$show_data, {
     
     output$contents_ui <- renderUI({
       dataTableOutput("contents_table")  # Create a DT output placeholder
@@ -211,26 +210,29 @@ server <- function(input, output, session) {
     output$contents_table <- renderDataTable({
       req(data())  # Ensure data is available
       
-      # Convert data to a format suitable for DT
-      df <- tibble::tibble(data()) %>% 
+      # Check if user selected demographic variables
+      if (is.null(input$demo_vars) || length(input$demo_vars) == 0) {
+        return(NULL)  # Return NULL if no variables are selected
+      }
+      
+      # Use count() instead of table() to maintain column integrity
+      df <- data() %>% 
         dplyr::select(all_of(input$demo_vars)) %>% 
-        table() %>% 
-        as.data.frame() %>% 
-        group_by(!!!syms(input$demo_vars)) %>% 
-        ungroup()
+        dplyr::count(across(all_of(input$demo_vars)), name = "Frequency")
       
       # Create DT table with pagination & styling
       datatable(
-        df, 
+        df,
         options = list(
-          pageLength = 10,        # Number of rows per page
-          lengthMenu = c(5, 10, 20, 50), # Dropdown for number of rows
-          scrollX = TRUE,         # Enable horizontal scrolling
-          autoWidth = TRUE        # Adjust column widths
+          autoWidth = TRUE,
+          columnDefs = list(
+            list(width = '200px', targets = 0),  # Set width for the first column
+            list(width = '100px', targets = 1)   # Set width for the second column
+          )
         )
       ) %>%
         formatStyle(
-          'Freq',  # Apply color to the frequency column
+          'Frequency',  # Apply color to the frequency column
           backgroundColor = styleInterval(
             c(5, 10, 20),  # Color intervals
             c('red', 'yellow', 'lightgreen', 'darkgreen')  # Color scheme
@@ -239,6 +241,10 @@ server <- function(input, output, session) {
         )
     })
   })
+
+  
+  
+  
   
   observeEvent(input$calculate, {
     output$summary_ui <- renderUI({
