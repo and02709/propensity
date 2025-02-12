@@ -41,7 +41,7 @@ colors_contents <- c("#0d0887", "#130789", "#1b068d", "#20068f", "#260591", "#2a
   "#f3f027", "#f1f525", "#f0f921")  # Plasma colormap applied to intervals
 text_contents <- colorRampPalette(c("#FFFFFF", "#DDDDDD",  "#333333", "#000000"))(length(intervals_contents) + 1)
 
-intervals_crosstabs <- seq(0, 5, by = 0.05)
+intervals_crosstabs <- seq(0.5, 1.5, by = 0.01)
 intervals_crosstabs <- intervals_crosstabs[-length(intervals_crosstabs)]
 colors_crosstabs <- colorRampPalette(c("#0d0887", "#6a00a8", "#b12a90", "#e16462", "#ed7a52", "#fdab33", "#f0f921"))(length(intervals_crosstabs) + 1)
 
@@ -249,7 +249,13 @@ observeEvent(input$show_data, {
       
       # Create DT table with pagination & styling
       datatable(
-        df
+        df,
+        options = list(
+          autoWidth = TRUE,
+          columnDefs = list(
+            list(width = "100px", targets = "_all")
+          )
+        )
       ) %>%
         formatStyle(
           'Frequency',  # Apply color to the frequency column
@@ -417,7 +423,13 @@ observeEvent(input$show_data, {
       req(wdat$crosstabs)
       
       datatable(
-        wdat$crosstabs
+        wdat$crosstabs,
+        options = list(
+          autoWidth = TRUE,
+          columnDefs = list(
+            list(width = "100px", targets = "_all")
+          )
+        )
       ) %>% 
         formatStyle(
           'weights',
