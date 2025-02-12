@@ -20,6 +20,9 @@ extract_element <- function(array, name_vec) {
   return(array[matrix(index, 1)])
 }
 
+intervals1 <- seq(1, 200, by = 1)  # Breakpoints (1, 2, 3, ..., 99)
+colors1 <- colorRampPalette(c("red", "orange", "yellow", "green", "darkgreen"))(length(intervals) + 1)  # Smooth gradient
+
 # Define UI for application
 ui <- fluidPage(
   
@@ -233,10 +236,7 @@ observeEvent(input$show_data, {
       ) %>%
         formatStyle(
           'Frequency',  # Apply color to the frequency column
-          backgroundColor = styleInterval(
-            c(5, 10, 20),  # Color intervals
-            c('red', 'yellow', 'lightgreen', 'darkgreen')  # Color scheme
-          ),
+          backgroundColor = styleInterval(intervals1, colors1),  # Map many colors to small intervals
           color = 'black'
         )
     })
