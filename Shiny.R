@@ -461,18 +461,13 @@ observeEvent(input$show_data, {
     })
   })
   
-  # Allow the user to download the weighted data as a CSV file
+  # Download Handler
   output$downloadData <- downloadHandler(
     filename = function() {
-      paste("weights_", Sys.Date(), ".csv", sep="")
+      paste("crosstabs_data", Sys.Date(), ".csv", sep = "")
     },
     content = function(file) {
-      if(condition==TRUE){
-        write_csv(weights(), file)
-      }
-      else{
-        
-      }
+      write.csv(wdat$crosstabs, file, row.names = FALSE)
     }
   )
   
