@@ -1,4 +1,3 @@
-
 library(shiny)
 library(tidyverse)
 library(tidymodels)
@@ -7,6 +6,7 @@ library(grid)
 library(gridExtra)
 library(GGally)
 library(gt)
+library(DT)
 
 ### Notes to self
 # in variable QC add sliding scale of original counts, final counts, and weights
@@ -19,6 +19,47 @@ extract_element <- function(array, name_vec) {
   index <- mapply(function(x, y) return(which(x==y)), array_names, name_vec)
   return(array[matrix(index, 1)])
 }
+
+output_checks <- function(data){
+  flag <- 1
+  data <- as.data.frame(data)
+  if(length(which(data$weights > 1.5)) > 0){
+    flag <- 0
+    showNotification("There are weights greater than 1.5")
+  } 
+  if(length(which(data$weights < 0.5)) > 0){
+    flag <- 0
+    showNotification("There are weights less than 0.5")
+  }
+  return(flag)
+}
+
+#intervals <- seq(1, 200, by = 1)  # Breakpoints (1, 2, 3, ..., 99)
+#colors <- colorRampPalette(c("red", "orange", "yellow", "green", "darkgreen"))(length(intervals) + 1)  # Smooth gradient
+
+intervals_contents <- seq(1, 200, by = 2)
+colors_contents <- c("#0d0887", "#130789", "#1b068d", "#20068f", "#260591", "#2a0593", "#2f0596", 
+  "#330597", "#38049a", "#3e049c", "#41049d", "#46039f", "#4903a0", "#4e02a2", 
+  "#5102a3", "#5601a4", "#5901a5", "#5e01a6", "#6300a7", "#6600a7", "#6a00a8", 
+  "#6e00a8", "#7201a8", "#7501a8", "#7a02a8", "#7e03a8", "#8104a7", "#8606a6", 
+  "#8808a6", "#8d0ba5", "#8f0da4", "#9410a2", "#9613a1", "#9a169f", "#9e199d", 
+  "#a11b9b", "#a51f99", "#a72197", "#ab2494", "#ad2793", "#b12a90", "#b32c8e", 
+  "#b6308b", "#ba3388", "#bc3587", "#bf3984", "#c13b82", "#c43e7f", "#c6417d", 
+  "#c9447a", "#cc4778", "#cd4a76", "#d04d73", "#d24f71", "#d5536f", "#d6556d", 
+  "#d9586a", "#da5b69", "#dd5e66", "#df6263", "#e16462", "#e3685f", "#e56a5d", 
+  "#e76e5b", "#e87059", "#ea7457", "#eb7655", "#ed7a52", "#ef7e50", "#f0804e", 
+  "#f2844b", "#f3874a", "#f58b47", "#f68d45", "#f79143", "#f89540", "#f9983e", 
+  "#fa9c3c", "#fb9f3a", "#fca338", "#fca636", "#fdab33", "#fdae32", "#fdb22f", 
+  "#feb72d", "#feba2c", "#febe2a", "#fdc229", "#fdc627", "#fdca26", "#fcce25", 
+  "#fcd225", "#fbd724", "#f9dc24", "#f8df25", "#f7e425", "#f6e826", "#f4ed27", 
+  "#f3f027", "#f1f525", "#f0f921")  # Plasma colormap applied to intervals
+text_contents <- colorRampPalette(c("#FFFFFF", "#DDDDDD",  "#333333", "#000000"))(length(intervals_contents) + 1)
+
+intervals_crosstabs <- seq(0.5, 1.5, by = 0.01)
+intervals_crosstabs <- intervals_crosstabs[-length(intervals_crosstabs)]
+colors_crosstabs <- colorRampPalette(c("#0d0887", "#6a00a8", "#b12a90", "#e16462", "#ed7a52", "#fdab33", "#f0f921"))(length(intervals_crosstabs) + 1)
+
+text_crosstabs <- colorRampPalette(c("#FFFFFF", "#DDDDDD",  "#333333", "#000000"))(length(intervals_contents) + 1)
 
 # Define UI for application
 ui <- fluidPage(
@@ -89,7 +130,7 @@ ui <- fluidPage(
       #tableOutput("weights")
       uiOutput("contents_ui"),
       uiOutput("summary_ui"),
-      uiOutput("crosstabs_ui"),
+      uiOutput("crosstabs_ui")
       
     )
   )
@@ -201,17 +242,46 @@ server <- function(input, output, session) {
     }
   })
   
-  observeEvent(input$show_data, {
-    output$contents_ui <- render_gt(
-      tibble::tibble(data()) %>% 
+observeEvent(input$show_data, {
+    
+    output$contents_ui <- renderUI({
+      dataTableOutput("contents_table")  # Create a DT output placeholder
+    })
+    
+    output$contents_table <- renderDataTable({
+      req(data())  # Ensure data is available
+      
+      # Check if user selected demographic variables
+      if (is.null(input$demo_vars) || length(input$demo_vars) == 0) {
+        return(NULL)  # Return NULL if no variables are selected
+      }
+      
+      # Use count() instead of table() to maintain column integrity
+      df <- data() %>% 
         dplyr::select(all_of(input$demo_vars)) %>% 
-        table(.) %>% 
-        data.frame(.) %>% 
-        group_by(!!!syms(input$demo_vars)) %>% 
-        ungroup() %>%
-        gt() %>% 
-        data_color(columns = Freq, method = "numeric", palette = "plasma"))
+        dplyr::count(across(all_of(input$demo_vars)), name = "Frequency")
+      
+      # Create DT table with pagination & styling
+      datatable(
+        df,
+        options = list(
+          autoWidth = TRUE,
+          columnDefs = list(
+            list(width = "100px", targets = "_all")
+          )
+        )
+      ) %>%
+        formatStyle(
+          'Frequency',  # Apply color to the frequency column
+          backgroundColor = styleInterval(intervals_contents, colors_contents),  # Map many colors to small intervals
+          color = styleInterval(intervals_contents, text_contents)
+        )
+    })
   })
+
+  
+  
+  
   
   observeEvent(input$calculate, {
     output$summary_ui <- renderUI({
@@ -358,9 +428,37 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$crosstabs, {
-    output$crosstabs_ui <- render_gt(wdat$crosstabs %>% gt() %>% data_color(columns = weights, method = "numeric", palette = "plasma"))
-    # output$crosstabs_ui <- render_gt(wdat$crosstabs %>% gt() %>% data_color(columns = race, method = "numeric", palette = "plasma"))
+
+    output$crosstabs_ui <- renderUI({
+        dataTableOutput("crosstabs_table")
+      })
+    
+    output$crosstabs_table <- renderDataTable({
+      req(wdat$crosstabs)
+      
+      datatable(
+        wdat$crosstabs,
+        options = list(
+          autoWidth = TRUE,
+          columnDefs = list(
+            list(width = "100px", targets = "_all")
+          )
+        )
+      ) %>% 
+        formatStyle(
+          'weights',
+          backgroundColor = styleInterval(intervals_crosstabs, colors_crosstabs),
+          color = styleInterval(intervals_crosstabs, text_crosstabs)
+        )
+    })  
   })
+  
+  
+  
+  # observeEvent(input$crosstabs, {
+  #   output$crosstabs_ui <- render_gt(wdat$crosstabs %>% gt() %>% data_color(columns = weights, method = "numeric", palette = "plasma"))
+  #   # output$crosstabs_ui <- render_gt(wdat$crosstabs %>% gt() %>% data_color(columns = race, method = "numeric", palette = "plasma"))
+  # })
   
   # Clear the table when the clear button is clicked
   observeEvent(input$clearButton, {
@@ -377,17 +475,17 @@ server <- function(input, output, session) {
     })
   })
   
-  # Allow the user to download the weighted data as a CSV file
+  # Download Handler
   output$downloadData <- downloadHandler(
+    
     filename = function() {
-      paste("weights_", Sys.Date(), ".csv", sep="")
+      paste("crosstabs_data", Sys.Date(), ".csv", sep = "")
     },
     content = function(file) {
-      if(condition==TRUE){
-        write_csv(weights(), file)
-      }
-      else{
-        
+      if(output_checks(wdat$crosstabs)){
+        write.csv(wdat$crosstabs, file, row.names = FALSE)
+      } else{
+        showNotification("Weight values too extreme")
       }
     }
   )
