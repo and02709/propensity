@@ -59,7 +59,13 @@ intervals_crosstabs <- seq(0.5, 1.5, by = 0.01)
 intervals_crosstabs <- intervals_crosstabs[-length(intervals_crosstabs)]
 colors_crosstabs <- colorRampPalette(c("#0d0887", "#6a00a8", "#b12a90", "#e16462", "#ed7a52", "#fdab33", "#f0f921"))(length(intervals_crosstabs) + 1)
 
-text_crosstabs <- colorRampPalette(c("#FFFFFF", "#DDDDDD",  "#333333", "#000000"))(length(intervals_contents) + 1)
+n_colors <- length(intervals_crosstabs) + 1
+cutoff <- ceiling(n_colors * 0.95)
+
+light_text_colors <- colorRampPalette(c("#FFFFFF", "#EEEEEE", "#CCCCCC"))(cutoff)
+dark_text_colors <- colorRampPalette(c("#444444", "#222222", "#000000"))(n_colors - cutoff)
+
+text_crosstabs <- c(light_text_colors, dark_text_colors)
 
 # Define UI for application
 ui <- fluidPage(
