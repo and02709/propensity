@@ -403,10 +403,19 @@ observeEvent(input$show_data, {
       
       colnames(count_df)[1:2] <- c("Var1", "Var2")
       
-      ggplot(count_df, aes(x = Var1, y = Var2, fill = Freq)) +
-        geom_tile(color = "white") +
-        geom_text(aes(label = Freq), color = "black", size = 4) +
-        scale_fill_gradient(low = "#f0f921", high = "#0d0887") +
+      # Bin Freq values into the plasma scale
+      count_df <- count_df %>%
+        mutate(
+          bin_index = cut(Freq, breaks = c(-Inf, intervals_contents, Inf), labels = FALSE),
+          fill_color = colors_contents[bin_index],
+          text_color = text_contents[bin_index]
+        )
+      
+      ggplot(count_df, aes(x = Var1, y = Var2)) +
+        geom_tile(aes(fill = fill_color), color = "white") +
+        geom_text(aes(label = Freq, color = text_color), size = 4) +
+        scale_fill_identity() +
+        scale_color_identity() +
         labs(
           title = "Heatmap of Demographic Counts",
           x = input$demo_vars[1],
@@ -415,7 +424,6 @@ observeEvent(input$show_data, {
         theme_minimal() +
         theme(axis.text.x = element_text(angle = 45, hjust = 1))
     })
-    
   })
 
   output$diagnostics_ui <- renderUI({
