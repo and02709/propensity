@@ -218,8 +218,11 @@ ui <- fluidPage(
       #tableOutput("contents"),
       #tableOutput("weights")
       uiOutput("contents_ui"),
+      uiOutput("diagnostics_ui"),
       uiOutput("summary_ui"),
       uiOutput("crosstabs_ui"),
+      uiOutput("missingness_ui"),
+      uiOutput("heatmap_ui"),
       
       # Gradient legend
       tags$br(),
@@ -376,11 +379,80 @@ observeEvent(input$show_data, {
           color = styleInterval(intervals_contents, text_contents)
         )
     })
+    
+    # Render heatmap UI and plot when show_data is clicked
+    output$heatmap_ui <- renderUI({
+      plotOutput("heatmap_plot")
+    })
+    
+    output$heatmap_plot <- renderPlot({
+      req(data())
+      df <- data()
+      
+      if (length(input$demo_vars) != 2) {
+        showNotification("Please select exactly two variables for heatmap", type = "error")
+        return(NULL)
+      }
+      
+      selected_data <- df[, input$demo_vars, drop = FALSE]
+      
+      # Create a count table
+      count_df <- selected_data %>%
+        dplyr::count(across(everything())) %>%
+        rename(Freq = n)
+      
+      colnames(count_df)[1:2] <- c("Var1", "Var2")
+      
+      ggplot(count_df, aes(x = Var1, y = Var2, fill = Freq)) +
+        geom_tile(color = "white") +
+        geom_text(aes(label = Freq), color = "black", size = 4) +
+        scale_fill_gradient(low = "#f0f921", high = "#0d0887") +
+        labs(
+          title = "Heatmap of Demographic Counts",
+          x = input$demo_vars[1],
+          y = input$demo_vars[2]
+        ) +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    })
+    
   })
 
+  output$diagnostics_ui <- renderUI({
+    req(data())
+    req(input$show_data)
+    plotOutput("data_diagnostics")
+  })
   
+  output$data_diagnostics <- renderPlot({
+    req(data())
+    req(input$demo_vars)
+    req(input$show_data)
+    validate(need(length(input$demo_vars) >= 2, "Select at least two variables for diagnostics"))
+    GGally::ggpairs(data()[, input$demo_vars, drop = FALSE])
+  })
   
+  output$missingness_ui <- renderUI({
+    req(data())
+    req(input$show_data)
+    verbatimTextOutput("missingness_report")
+  })
   
+  output$missingness_report <- renderText({
+    req(input$show_data)
+    df <- data()
+    miss_summary <- sapply(df, function(col) mean(is.na(col)))
+    high_missing <- miss_summary[miss_summary > 0.1]
+    
+    if (length(high_missing) > 0) {
+      paste("Variables with >10% missing data:\n",
+            paste(names(high_missing),
+                  sprintf("%.1f%%", 100 * high_missing),
+                  collapse = "\n"))
+    } else {
+      "No variables exceed 10% missingness."
+    }
+  })
   
   observeEvent(input$calculate, {
     output$summary_ui <- renderUI({
@@ -570,6 +642,18 @@ observeEvent(input$show_data, {
     })
     
     output$crosstabs_ui <- renderUI({
+      NULL
+    })
+    
+    output$diagnostics_ui <- renderUI({
+      NULL
+    })
+    
+    output$missingness_ui <- renderUI({
+      NULL
+    })
+    
+    output$heatmap_ui <- renderUI({
       NULL
     })
   })
