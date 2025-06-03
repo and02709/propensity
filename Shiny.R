@@ -13,6 +13,8 @@ library(DT)
 # Same sliding scale for missingness
 # Sliding for reference panel.  Need to sample to be proper subset of buckets in reference
 
+memory.limit(size = 8192)
+
 extract_element <- function(array, name_vec) {
   num_dim <- length(dim(array))
   array_names <- dimnames(array)
@@ -37,8 +39,12 @@ output_checks <- function(data){
 #intervals <- seq(1, 200, by = 1)  # Breakpoints (1, 2, 3, ..., 99)
 #colors <- colorRampPalette(c("red", "orange", "yellow", "green", "darkgreen"))(length(intervals) + 1)  # Smooth gradient
 
+# Intervals for binning
 intervals_contents <- seq(1, 200, by = 2)
-colors_contents <- c("#0d0887", "#130789", "#1b068d", "#20068f", "#260591", "#2a0593", "#2f0596", 
+
+# Plasma colormap manually defined
+colors_contents <- c(
+  "#0d0887", "#130789", "#1b068d", "#20068f", "#260591", "#2a0593", "#2f0596", 
   "#330597", "#38049a", "#3e049c", "#41049d", "#46039f", "#4903a0", "#4e02a2", 
   "#5102a3", "#5601a4", "#5901a5", "#5e01a6", "#6300a7", "#6600a7", "#6a00a8", 
   "#6e00a8", "#7201a8", "#7501a8", "#7a02a8", "#7e03a8", "#8104a7", "#8606a6", 
@@ -52,20 +58,97 @@ colors_contents <- c("#0d0887", "#130789", "#1b068d", "#20068f", "#260591", "#2a
   "#fa9c3c", "#fb9f3a", "#fca338", "#fca636", "#fdab33", "#fdae32", "#fdb22f", 
   "#feb72d", "#feba2c", "#febe2a", "#fdc229", "#fdc627", "#fdca26", "#fcce25", 
   "#fcd225", "#fbd724", "#f9dc24", "#f8df25", "#f7e425", "#f6e826", "#f4ed27", 
-  "#f3f027", "#f1f525", "#f0f921")  # Plasma colormap applied to intervals
-text_contents <- colorRampPalette(c("#FFFFFF", "#DDDDDD",  "#333333", "#000000"))(length(intervals_contents) + 1)
+  "#f3f027", "#f1f525", "#f0f921"
+)
 
+# Reverse direction (light → dark)
+colors_contents <- rev(colors_contents)
+
+# Text overrides
+light_text_colors <- c(
+  "#0d0887", "#130789", "#1b068d", "#20068f", "#260591", "#2a0593", "#2f0596", 
+  "#330597", "#38049a", "#3e049c", "#41049d", "#46039f", "#4903a0", "#4e02a2", 
+  "#5102a3", "#5601a4", "#5901a5", "#5e01a6", "#6300a7", "#6600a7", "#6a00a8", 
+  "#6e00a8", "#7201a8", "#7501a8", "#7a02a8", "#7e03a8", "#8104a7", "#8606a6", 
+  "#8808a6", "#8d0ba5", "#8f0da4", "#9410a2", "#9613a1", "#9a169f", "#9e199d", 
+  "#a11b9b", "#a51f99", "#a72197", "#ab2494", "#ad2793", "#b12a90", "#b32c8e", 
+  "#b6308b", "#ba3388", "#bc3587", "#bf3984", "#c13b82", "#c43e7f", "#c6417d", 
+  "#c9447a", "#cc4778", "#cd4a76", "#d04d73", "#d24f71", "#d5536f", "#d6556d", 
+  "#d9586a", "#da5b69", "#dd5e66", "#df6263", "#e16462", "#e3685f", "#e56a5d"
+)
+
+dark_text_colors <- c(
+  "#e76e5b", "#e87059", "#ea7457", "#eb7655", "#ed7a52", "#ef7e50", "#f0804e", 
+  "#f2844b", "#f3874a", "#f58b47", "#f68d45", "#f79143", "#f89540", "#f9983e", 
+  "#fa9c3c", "#fb9f3a", "#fca338", "#fca636", "#fdab33", "#fdae32", "#fdb22f", 
+  "#feb72d", "#feba2c", "#febe2a", "#fdc229", "#fdc627", "#fdca26", "#fcce25", 
+  "#fcd225", "#fbd724", "#f9dc24", "#f8df25", "#f7e425", "#f6e826", "#f4ed27", 
+  "#f3f027", "#f1f525", "#f0f921"
+)
+
+# Total bins
+n_colors <- length(intervals_contents) + 1
+
+# Start with all text white
+text_contents <- rep("#FFFFFF", n_colors)
+
+# Apply overrides
+for (i in seq_along(colors_contents)) {
+  bg <- colors_contents[i]
+  if (bg %in% dark_text_colors) {
+    text_contents[i] <- "#000000"
+  } else if (bg %in% light_text_colors) {
+    text_contents[i] <- "#FFFFFF"
+  } else {
+    text_contents[i] <- "#999999"  # fallback (optional)
+  }
+}
+
+
+
+# intervals_crosstabs <- seq(0.5, 1.5, by = 0.01)
+# intervals_crosstabs <- intervals_crosstabs[-length(intervals_crosstabs)]
+# colors_crosstabs <- colorRampPalette(c("#0d0887", "#6a00a8", "#b12a90", "#e16462", "#ed7a52", "#fdab33", "#f0f921"))(length(intervals_crosstabs) + 1)
+# 
+# n_colors <- length(intervals_crosstabs) + 1
+# cutoff <- ceiling(n_colors * 0.95)
+# 
+# light_text_colors <- colorRampPalette(c("#FFFFFF", "#EEEEEE", "#CCCCCC"))(cutoff)
+# dark_text_colors <- colorRampPalette(c("#444444", "#222222", "#000000"))(n_colors - cutoff)
+# 
+# text_crosstabs <- c(light_text_colors, dark_text_colors)
+
+# Intervals
 intervals_crosstabs <- seq(0.5, 1.5, by = 0.01)
 intervals_crosstabs <- intervals_crosstabs[-length(intervals_crosstabs)]
-colors_crosstabs <- colorRampPalette(c("#0d0887", "#6a00a8", "#b12a90", "#e16462", "#ed7a52", "#fdab33", "#f0f921"))(length(intervals_crosstabs) + 1)
 
-n_colors <- length(intervals_crosstabs) + 1
-cutoff <- ceiling(n_colors * 0.95)
+# Color palette
+colors_crosstabs <- colorRampPalette(c(
+  "#0d0887", "#6a00a8", "#b12a90", "#e16462", "#ed7a52", "#fdab33", "#f0f921"
+))(length(intervals_crosstabs) + 1)
 
-light_text_colors <- colorRampPalette(c("#FFFFFF", "#EEEEEE", "#CCCCCC"))(cutoff)
-dark_text_colors <- colorRampPalette(c("#444444", "#222222", "#000000"))(n_colors - cutoff)
+# Total number of colors
+n_colors <- length(colors_crosstabs)
 
-text_crosstabs <- c(light_text_colors, dark_text_colors)
+# --- Define a cutoff point where background becomes light enough for dark text ---
+# You can pick the cutoff by:
+# 1. Fixed percentage
+cutoff_index <- ceiling(n_colors * 0.6)
+
+# 2. OR: Based on RGB similarity to a known transition color (optional)
+# rgb_matrix <- col2rgb(colors_crosstabs)
+# reference_rgb <- col2rgb("#e76e5b")  # transition point
+# dists <- apply(rgb_matrix, 2, function(col) sum((col - reference_rgb)^2))
+# cutoff_index <- which.min(dists)
+
+# Assign text colors: light before cutoff, dark after
+text_crosstabs <- c(
+  rep("#FFFFFF", cutoff_index),
+  rep("#000000", n_colors - cutoff_index)
+)
+
+
+
 
 # Define UI for application
 ui <- fluidPage(
@@ -136,7 +219,17 @@ ui <- fluidPage(
       #tableOutput("weights")
       uiOutput("contents_ui"),
       uiOutput("summary_ui"),
-      uiOutput("crosstabs_ui")
+      uiOutput("crosstabs_ui"),
+      
+      # Gradient legend
+      tags$br(),
+      tags$div(
+        style = "height: 20px; 
+             background: linear-gradient(to right, #f0f921, #fdab33, #ed7a52, #e16462, #b12a90, #6a00a8, #0d0887);
+             margin-top: 20px; border: 1px solid #ccc;"
+      ),
+      tags$div("← Lighter yellow is bad  Darker blue is good →", 
+               style = "text-align: center; font-weight: bold; margin-top: 5px;")
       
     )
   )
