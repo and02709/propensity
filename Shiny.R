@@ -667,23 +667,40 @@ observeEvent(input$show_data, {
   })
   
   # Download Handler
-    output$downloadCrosstabs <- downloadHandler(
-    filename = function() paste0("crosstabs_data_", Sys.Date(), ".csv"),
-    content = function(file) {
-      req(wdat$crosstabs)
-      if (output_checks(wdat$crosstabs)) {
-        write.csv(wdat$crosstabs, file, row.names = FALSE)
-      } else {
-        showNotification("Weight values too extreme")
-        # Optionally write anyway:
-        # write.csv(wdat$crosstabs, file, row.names = FALSE)
+  output$downloadData <- downloadHandler(
+  filename = function() paste0("crosstabs_data_", Sys.Date(), ".csv"),
+  content = function(file) {
+    # Ensure we have something to write
+    if (is.null(wdat$crosstabs)) {
+      showNotification("No crosstabs available yet. Click Calculate/ Cross-tabulated Data first.", type = "error")
+      return(invisible(NULL))
+    }
+
+    df <- try(as.data.frame(wdat$crosstabs), silent = TRUE)
+    if (inherits(df, "try-error") || nrow(df) == 0) {
+      showNotification("Crosstabs are empty—nothing to download.", type = "error")
+      return(invisible(NULL))
+    }
+
+    # If weights column is present, run checks; otherwise just save
+    if ("weights" %in% names(df)) {
+      ok <- try(output_checks(df), silent = TRUE)
+      if (inherits(ok, "try-error")) {
+        showNotification("Could not validate weights; exporting raw crosstabs.", type = "warning")
+      } else if (identical(ok, 0)) {
+        showNotification("Weight values too extreme; not exporting.", type = "error")
+        return(invisible(NULL))
       }
     }
-  )
+
+    write.csv(df, file, row.names = FALSE)
+  }
+)
   
 }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
 
 
