@@ -667,16 +667,16 @@ observeEvent(input$show_data, {
   })
   
   # Download Handler
-  output$downloadData <- downloadHandler(
-    
-    filename = function() {
-      paste("crosstabs_data", Sys.Date(), ".csv", sep = "")
-    },
+    output$downloadCrosstabs <- downloadHandler(
+    filename = function() paste0("crosstabs_data_", Sys.Date(), ".csv"),
     content = function(file) {
-      if(output_checks(wdat$crosstabs)){
+      req(wdat$crosstabs)
+      if (output_checks(wdat$crosstabs)) {
         write.csv(wdat$crosstabs, file, row.names = FALSE)
-      } else{
+      } else {
         showNotification("Weight values too extreme")
+        # Optionally write anyway:
+        # write.csv(wdat$crosstabs, file, row.names = FALSE)
       }
     }
   )
@@ -685,4 +685,5 @@ observeEvent(input$show_data, {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
 
